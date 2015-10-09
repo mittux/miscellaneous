@@ -29,10 +29,8 @@ def findwords(ln):
 for each in lines:
     for word in findwords(each):
         word = word.lower() # case insensitive comparison
-        if word in words_d.keys():
-            words_d[word] += 1
-        else:
-            words_d[word] = 1
+        words_d.setdefault(word,0)
+        words_d[word] += 1
 
 
 # In[5]:
@@ -53,9 +51,4 @@ sorted_words_s
 # In[8]:
 
 sorted_words_s.plot()
-
-
-# In[ ]:
-
-
 
