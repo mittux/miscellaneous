@@ -1,29 +1,29 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 import re
 
 
-# In[ ]:
+# In[3]:
 
 top_N = int(input("Enter the value of N: "))
 
 
-# In[ ]:
+# In[4]:
 
 my_file = open("test.txt",mode="r",encoding="utf-8")
 lines = my_file.readlines()
 
 
-# In[ ]:
+# In[5]:
 
 lines = list(map(lambda x: x.strip(), lines))
 # print(lines)
 
 
-# In[ ]:
+# In[6]:
 
 words_d = {}
 def findwords(ln):
@@ -38,24 +38,24 @@ for each in lines:
             words_d[word] = 1
 
 
-# In[ ]:
+# In[7]:
 
 words_t = [(k,v) for k,v in words_d.items()]
 
 
-# In[ ]:
+# In[8]:
 
 sorted_words_t = sorted(words_t, key = lambda item: item[1], reverse=True)
 
 
-# In[ ]:
+# In[9]:
 
 if top_N > len(sorted_words_t):
                top_N = len(sorted_words_t)
 print(sorted_words_t[:top_N])
 
 
-# In[ ]:
+# In[10]:
 
 my_file.close()
 
