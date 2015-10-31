@@ -2,11 +2,11 @@
     This script captures English language tweets from Twitter's Public
     stream and then stores them in to a MongoDB database
 """
+import sys
+import datetime as dt
 from twitter import *
 from twitter.stream import TwitterStream, Timeout, HeartbeatTimeout, Hangup
 from twitter_db import *
-import datetime as dt
-import sys
 
 TWEETCOUNT = 100
 
@@ -71,13 +71,13 @@ def main():
             elif tweet.get('text'):
                 if tweet.get('lang') == 'en':
                     print('[{}] [{}] tweeted: {}'.format(tweetCount+1, tweet['user']['screen_name'], tweet['text']))
-                    db.insertIntoDatabase(databaseEntry(tweet['user']['screen_name'],
-                                                        tweet['user']['id_str'],
-                                                        tweet['user']['description'],
-                                                        tweet['user']['location'],
-                                                        tweet['user']['time_zone'],
-                                                        tweet['text'],
-                                                        tweet['id_str']).encodeData())
+                    db.insertTweet(databaseEntry(tweet['user']['screen_name'],
+                                                 tweet['user']['id_str'],
+                                                 tweet['user']['description'],
+                                                 tweet['user']['location'],
+                                                 tweet['user']['time_zone'],
+                                                 tweet['text'],
+                                                 tweet['id_str']).encodeData())
                     tweetCount += 1
                     if tweetCount >= TWEETCOUNT:
                         break
@@ -87,6 +87,7 @@ def main():
     stopTime = dt.datetime.now()
 
     print('\n*** %d tweets captured from %s to %s ***'% (TWEETCOUNT, startTime, stopTime))
+
 
 if __name__ == '__main__':
     sys.exit(main())
