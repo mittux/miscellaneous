@@ -8,7 +8,7 @@ from twitter import *
 from twitter.stream import TwitterStream, Timeout, HeartbeatTimeout, Hangup
 from twitter_db import *
 
-TWEETCOUNT = 100
+TWEETCOUNT = 1000
 
 try:
 	from mytwitter import *
