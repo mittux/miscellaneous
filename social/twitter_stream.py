@@ -16,14 +16,16 @@ except ImportError:
 	print("*** Keys and Access Tokens not set! ***")
 
 class databaseEntry(object):
-    def __init__(self, user, userid, userdescription, location, timezone, tweet, tweetid):
+    def __init__(self, user, userid, userdescription, created, location, timezone, tweet, tweetid, hashtags):
         self.user = user
         self.userid = userid
         self.userdescription = userdescription
+        self.created = created
         self.location = location
         self.timezone = timezone
         self.tweet = tweet
         self.tweetid = tweetid
+        self.hashtags = hashtags
 
     def encodeData(self):
         # stripping down JSON to simple "variable-sized" dictionary for MongoDB
@@ -33,13 +35,16 @@ class databaseEntry(object):
         data['userid'] = self.userid
         data['tweet'] = self.tweet
         data['tweetid'] = self.tweetid
+        data['created'] = self.created
         # These fields are not guaranteed
         if self.location is not None:
             data['location'] = self.location
         if self.timezone is not None:
             data['timezone'] = self.timezone
         if self.location is not None:
-            data['userdescription'] = self.userdescription,
+            data['userdescription'] = self.userdescription
+        if bool(self.hashtags):
+            data['hashtags'] = self.hashtags
         return data
 
 def main():
@@ -74,10 +79,12 @@ def main():
                     db.insertTweet(databaseEntry(tweet['user']['screen_name'],
                                                  tweet['user']['id_str'],
                                                  tweet['user']['description'],
+                                                 tweet['created_at'],
                                                  tweet['user']['location'],
                                                  tweet['user']['time_zone'],
                                                  tweet['text'],
-                                                 tweet['id_str']).encodeData())
+                                                 tweet['id_str'],
+                                                 tweet['entities']['hashtags']).encodeData())
                     tweetCount += 1
                     if tweetCount >= TWEETCOUNT:
                         break

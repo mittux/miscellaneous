@@ -15,11 +15,13 @@ class TwitterDataBase(object):
         print('Deleted {} tweets from database!'.format(result.deleted_count))
 
     def getOneTweet(self, **kwargs):
-        # To find a specific document use something like getOneTweet(**{"user" : "PhillyAdam"})
+        """
+            To find a specific document use something like getOneTweet(**{"user" : "PhillyAdam"})
+        """    
         result = self.collection.find_one(kwargs)
         return result
 
-    def getAllTweets(self):
-        result = self.collection.find({})
+    def getAllTweets(self, **kwargs):
+        result = self.collection.find(kwargs)
         return result
 

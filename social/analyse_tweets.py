@@ -2,14 +2,15 @@
     This script does some analysis of tweets captured from 
     Twitter's Public Stream. It:
     - Finds Most Common Words    
+    - Finds Most Common Hashtags
 """
 import sys
-from twitter_db import *
 import re
-from pprint import *
-from collections import Counter
-from nltk.corpus import stopwords
+import collections
 import string
+from nltk.corpus import stopwords
+from twitter_db import *
+from pprint import *
 
 def findMostCommonWords(top_n):
 
@@ -47,12 +48,12 @@ def findMostCommonWords(top_n):
             tokens = [token if emoticon_re.search(token) else token.lower() for token in tokens]
         return tokens
 
-    word_counter = Counter();
+    word_counter = collections.Counter();
 
     # ignore stopwords, punctuations, 'rt', etc.
     ignored = stopwords.words('english') + list(string.punctuation) + ['rt', 'via']
 
-    for t in db.getAllTweets():
+    for t in db.getAllTweets(**{}):
         #print('[{}] tweeted: {}'.format(t['user'], t['tweet']))
         tokenized = [term for term in preprocess(t['tweet'], lowercase=True) if (term not in ignored and not url_re.search(term))]
 
@@ -63,8 +64,26 @@ def findMostCommonWords(top_n):
     print(word_counter.most_common(top_n))
     print()
 
+
+def findMostPopularHashtags(top_n):
+    # hastags are already available in the text of the tweet but here
+    # it is extracted from mongodb using 'hashtags' key exists query
+
+    hashtags_counter = collections.Counter()
+
+    for t in TwitterDataBase().getAllTweets(**{'hashtags':{ '$exists': 'true'}}):
+        for h in t['hashtags']:
+            hashtags_counter[h['text']] += 1
+
+    print('Top {} hashtags :'.format(top_n))
+    print(hashtags_counter.most_common(top_n))
+    print()
+
+
 def main():
     findMostCommonWords(100)
+    findMostPopularHashtags(50)
+
 
 if __name__ == '__main__':
     sys.exit(main())
