@@ -1,8 +1,9 @@
 """
     This script does some analysis of tweets captured from 
     Twitter's Public Stream. It:
-    - Finds Most Common Words    
-    - Finds Most Common Hashtags
+    - Finds Most Common Words   
+    - Finds Most Popular Mentions 
+    - Finds Most Popular Hashtags
 """
 import sys
 import re
@@ -48,20 +49,31 @@ def findMostCommonWords(top_n):
             tokens = [token if emoticon_re.search(token) else token.lower() for token in tokens]
         return tokens
 
-    word_counter = collections.Counter();
+    word_counter = collections.Counter()
+    mention_counter = collections.Counter()
 
     # ignore stopwords, punctuations, 'rt', etc.
-    ignored = stopwords.words('english') + list(string.punctuation) + ['rt', 'via']
+    ignored = stopwords.words('english') + list(string.punctuation) + ['rt', 'via', '…', '...']
 
     for t in db.getAllTweets(**{}):
         #print('[{}] tweeted: {}'.format(t['user'], t['tweet']))
-        tokenized = [term for term in preprocess(t['tweet'], lowercase=True) if (term not in ignored and not url_re.search(term))]
-
+        tokenized = [term for term in preprocess(t['tweet'], lowercase=True) if (term not in ignored and
+                                                                                 not url_re.search(term))]
         for each in tokenized:
             word_counter[each] += 1
 
+        # filter out the mentions    
+        mentions = [m for m in tokenized if m.startswith('@')]
+
+        for mention in mentions:
+            mention_counter[mention] += 1
+
     print('Top {} words :'.format(top_n))        
     print(word_counter.most_common(top_n))
+    print()
+
+    print('Top {} mentions :'.format(top_n))
+    print(mention_counter.most_common(top_n))
     print()
 
 

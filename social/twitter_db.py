@@ -25,3 +25,9 @@ class TwitterDataBase(object):
         result = self.collection.find(kwargs)
         return result
 
+    def getNTweets(self, n):
+        result = self.collection.find().limit(n)
+        return result
+
+    def addNewKey(self, mongo_id, key, **kwargs):
+        self.collection.update({ '_id' : mongo_id },  { "$set": { key : kwargs}})
