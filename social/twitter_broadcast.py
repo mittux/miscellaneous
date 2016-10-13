@@ -34,23 +34,23 @@ def tweetor():
 
     while tweetCount < TWEETCOUNT:
 
-        for tweet in tweet_generator:
-            if tweet is None:
-                    print("-- None --")
-            elif tweet is Timeout:
-                print("-- Timeout --")
-            elif tweet is HeartbeatTimeout:
-                print("-- Heartbeat Timeout --")
-            elif tweet is Hangup:
-                print("-- Hangup --")
-            elif tweet.get('text'):
-                if tweet.get('lang') == 'en':
-                    if tweetCount >= TWEETCOUNT:
-                        break
-                    tweetCount += 1
-                    return tweet
-            else:
-                pass
+        tweet = tweet_generator.next()
+        if tweet is None:
+                print("-- None --")
+        elif tweet is Timeout:
+            print("-- Timeout --")
+        elif tweet is HeartbeatTimeout:
+            print("-- Heartbeat Timeout --")
+        elif tweet is Hangup:
+            print("-- Hangup --")
+        elif tweet.get('text'):
+            if tweet.get('lang') == 'en':
+                if tweetCount >= TWEETCOUNT:
+                    break
+                tweetCount += 1
+                return tweet
+        else:
+            pass
 
     return 'Done'
 
