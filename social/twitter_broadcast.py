@@ -1,7 +1,8 @@
 """
     This script captures English language tweets from Twitter's Public
-    stream and then using coroutines sends it down a data pipe which prints it
-    on the screen
+    stream and then uses coroutines to broadcast it to different functions
+    The downstream functions find tweets with a given pattern and also the
+    total number of tweets with those patterns
 """
 import sys
 import datetime as dt
@@ -9,7 +10,7 @@ from twitter import *
 from twitter.stream import TwitterStream, Timeout, HeartbeatTimeout, Hangup
 
 tweetCount = 0
-TWEETCOUNT = 100
+TWEETCOUNT = 1000
 
 try:
     from mytwitter import *
@@ -18,6 +19,7 @@ except ImportError:
 
 auth_details = OAuth(ACCESS_TOKEN, ACCESS_TOKEN_SECRET, CONSUMER_KEY, CONSUMER_SECRET)
 
+
 def coroutine(func):
     def start(*args,**kwargs):
         cr = func(*args,**kwargs)
@@ -25,11 +27,6 @@ def coroutine(func):
         return cr
     return start
 
-@coroutine
-def printer():
-    while True:
-         count, tweet = (yield)
-         print '[%s] [%s] tweeted: %s' % (count, tweet['user']['screen_name'], tweet['text'])
 
 def tweetor():
     global tweetCount
@@ -51,23 +48,52 @@ def tweetor():
                     if tweetCount >= TWEETCOUNT:
                         break
                     tweetCount += 1
-                    return (tweetCount, tweet)
+                    return tweet
             else:
                 pass
 
-    return 'Complete'
+    return 'Done'
 
 
 def data_pipe(iterator, target):
     while True:
         twt = iterator()
-        if twt == 'Complete':
-            return
         if twt:
             target.send(twt)
+        if twt == 'Done':
+            return
+
+
+@coroutine
+def printer():
+    global tweetCount
+    while True:
+        tweet = (yield)
+        print '[%s] [%s] tweeted: %s' % (tweetCount, tweet['user']['screen_name'], tweet['text'])
+
+
+@coroutine
+def grep(pattern, target):
+    count = 0
+    while True:
+        twt = (yield)  # Receive a tweet
+        if twt == 'Done': # print the number of tweets with the pattern
+            print('\n*** %d tweets with \'%s\' ***'% (count, pattern))
+        else:
+            if pattern in twt['text'].lower():
+                target.send(twt)  # Send to next stage
+                count += 1
+
+# Broadcast a stream onto multiple targets
+@coroutine
+def broadcast(targets):
+    while True:
+        item = (yield)
+        for target in targets: # sequential dispatch
+            target.send(item)
+
 
 def main():
-
     twitter_stream = TwitterStream(auth=auth_details)
 
     print("*** Sampling Twitter Public stream *** ")
@@ -76,7 +102,8 @@ def main():
 
     startTime = dt.datetime.now()
 
-    data_pipe(tweetor, printer())
+    data_pipe(tweetor, broadcast([grep('trump',  printer()),
+                                  grep('brexit', printer())]))
 
     stopTime = dt.datetime.now()
 
