@@ -23,7 +23,7 @@ auth_details = OAuth(ACCESS_TOKEN, ACCESS_TOKEN_SECRET, CONSUMER_KEY, CONSUMER_S
 def coroutine(func):
     def start(*args,**kwargs):
         cr = func(*args,**kwargs)
-        cr.next()
+        next(cr)
         return cr
     return start
 
@@ -34,7 +34,7 @@ def tweetor():
 
     while tweetCount < TWEETCOUNT:
 
-        tweet = tweet_generator.next()
+        tweet = next(tweet_generator)
         if tweet is None:
                 print("-- None --")
         elif tweet is Timeout:
@@ -69,7 +69,7 @@ def printer():
     global tweetCount
     while True:
         tweet = (yield)
-        print '[%s] [%s] tweeted: %s' % (tweetCount, tweet['user']['screen_name'], tweet['text'])
+        print ('[%s] [%s] tweeted: %s' % (tweetCount, tweet['user']['screen_name'], tweet['text']))
 
 
 @coroutine
