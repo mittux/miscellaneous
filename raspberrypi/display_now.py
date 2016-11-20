@@ -3,6 +3,8 @@ import requests
 import datetime as dt
 import sys
 import time
+import pickle
+import paho.mqtt.client as mqtt
 import max7219.led as led
 from max7219.font import proportional, CP437_FONT
 
@@ -14,6 +16,8 @@ except ImportError:
 
 _READING_ID = '2639577'
 _CITY_ID = _READING_ID
+_PUBLIC_BROKER = "iot.eclipse.org"
+_TOPIC = "internal_weather"
 
 
 class parameters(object):
@@ -28,6 +32,30 @@ class parameters(object):
         self.windspeed = None
         self.winddeg = None
         self.weather = None
+
+
+def on_message(client, userdata, msg):
+    global int_weather
+
+    int_weather = pickle.loads(msg.payload)
+
+    client.disconnect()
+    return int_weather
+
+
+def get_internal_weather():
+
+    global int_weather
+
+    client = mqtt.Client()
+    client.connect(_PUBLIC_BROKER, 1883, 60)
+    client.subscribe(_TOPIC)
+
+    client.on_message = on_message
+
+    client.loop_forever()
+
+    return int_weather
 
 
 def get_weather_data():
@@ -91,7 +119,11 @@ def get_headlines():
     time_now = dt_now.strftime("%2H:%2M")
 
     for s in response['articles'][:5]:
-        yield s['title']
+        headline = s['title']
+        # fix unusual characters
+        headline = headline.encode('ascii', 'xmlcharrefreplace')
+        headline = headline.replace("&#8217;","'")
+        yield headline
 
 
 def display_on_led_matrix(text):
@@ -107,9 +139,18 @@ def main():
     try:
         w = get_weather_data()
         s = ''.join([str(w.time_of_entry[:5]),
+                         ' Outside:',
                          ' %sC' % str(w.temp_curr),
+                         ' %s' % str(w.humidity), '%',
                          ' %s' % str(w.weather),
                          ' %sm/s ' % str(w.windspeed)])
+        display_on_led_matrix(s)
+
+        w = get_internal_weather()
+        t, h = '%.1f' % w[3], '%.1f' % w[4]
+        s = ''.join([' Inside:',
+                     ' %sC' % str(t),
+                     ' %s' % str(h), '%'])
         display_on_led_matrix(s)
         time.sleep(0.8)
 
@@ -117,8 +158,8 @@ def main():
             display_on_led_matrix(h)
             time.sleep(1)
 
-    except ValueError:
-        print('JSON decoding failed!')
+    except Exception as err:
+        print(err)
     finally:
         device.clear()
 
