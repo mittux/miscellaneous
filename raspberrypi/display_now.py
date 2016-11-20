@@ -14,13 +14,8 @@ try:
 except ImportError:
   print("*** API Key not set! ***")
 
-_READING_ID = '2639577'
-_CITY_ID = _READING_ID
-_PUBLIC_BROKER = "iot.eclipse.org"
-_TOPIC = "internal_weather"
 
-
-class parameters(object):
+class Parameters:
     def __init__(self):
         self.date_of_entry = None
         self.time_of_entry = None
@@ -34,70 +29,88 @@ class parameters(object):
         self.weather = None
 
 
-def on_message(client, userdata, msg):
-    global int_weather
+class InternalWeather:
+    '''class that use MQTT to get the newest sensor reading'''
+    _PUBLIC_BROKER = "iot.eclipse.org"
+    _TOPIC = "internal_weather"
+    _client = mqtt.Client()
+    _weather_data = None
 
-    int_weather = pickle.loads(msg.payload)
+    def __init__(self):
+        self._client.connect(self._PUBLIC_BROKER, 1883, 60)
+        self._client.subscribe(self._TOPIC)
+        self._client.on_message = self.on_message
 
-    client.disconnect()
-    return int_weather
+    @property
+    def weather_data(self):
+        self._client.loop_forever()
+        return self._weather_data
+
+    @staticmethod
+    def on_message(client, userdata, msg):
+        InternalWeather._weather_data = pickle.loads(msg.payload)
+        client.disconnect()
+
+    @staticmethod
+    def add_units(data):
+        return str('%.1f' % data[3])+'C', str('%.1f' % data[4])+'%'
 
 
-def get_internal_weather():
+class ExternalWeather:
+    '''class that gets current weather from openweathermap'''
+    _READING_ID = '2639577'
+    _CITY_ID = _READING_ID
 
-    global int_weather
+    def __init__(self):
+        self._payload = {'id': self._CITY_ID, 'appid': weather_api_key, 'units': 'metric' }
+        self._weather_data = None
 
-    client = mqtt.Client()
-    client.connect(_PUBLIC_BROKER, 1883, 60)
-    client.subscribe(_TOPIC)
+    def get_weather(self):
+        try:
+            r = requests.get("http://api.openweathermap.org/data/2.5/weather?", params=self._payload)
+            response = r.json()
+        except Exception as err:
+            raise err
 
-    client.on_message = on_message
+        if response is None:
+            return None
+        p = Parameters()
 
-    client.loop_forever()
+        # JSON may not be well-formed, so check before assigning
+        dt_now = dt.datetime.now()
+        p.date_of_entry = dt_now.date()
+        p.time_of_entry = dt_now.strftime("%2H:%2M:%2S")
+        if response.get('main'):
+            if response['main'].get('temp_max'):
+                p.temp_max = response['main']['temp_max']
+            if response['main'].get('temp_min'):
+                p.temp_min = response['main']['temp_min']
+            if response['main'].get('temp'):
+                p.temp_curr = response['main']['temp']
+            if response['main'].get('pressure'):
+                p.pressure = response['main']['pressure']
+            if response['main'].get('humidity'):
+                p.humidity = response['main']['humidity']
+        if response.get('wind'):
+            if response['wind'].get('speed'):
+                p.windspeed = response['wind']['speed']
+            if response['wind'].get('deg'):
+                p.winddeg = response['wind']['deg']
+        if response.get('weather'):
+            if response['weather'][0]:
+                if response['weather'][0].get('main'):
+                    p.weather = response['weather'][0]['main']
+        return p
 
-    return int_weather
+    @property
+    def weather_data(self):
+        self._weather_data = self.get_weather()
+        return self._weather_data
 
-
-def get_weather_data():
-    '''get current weather information from openweathermap'''
-    payload = {'id': _CITY_ID, 'appid': weather_api_key, 'units': 'metric' }
-
-    try:
-        r = requests.get("http://api.openweathermap.org/data/2.5/weather?", params=payload)
-        response = r.json()
-    except Exception as err:
-        raise err
-
-    if response is None:
-        return None
-    p = parameters()
-
-    # JSON may not be well-formed, so check before assigning
-    dt_now = dt.datetime.now()
-    p.date_of_entry = dt_now.date()
-    p.time_of_entry = dt_now.strftime("%2H:%2M:%2S")
-    if response.get('main'):
-        if response['main'].get('temp_max'):
-            p.temp_max = response['main']['temp_max']
-        if response['main'].get('temp_min'):
-            p.temp_min = response['main']['temp_min']
-        if response['main'].get('temp'):
-            p.temp_curr = response['main']['temp']
-        if response['main'].get('pressure'):
-            p.pressure = response['main']['pressure']
-        if response['main'].get('humidity'):
-            p.humidity = response['main']['humidity']
-    if response.get('wind'):
-        if response['wind'].get('speed'):
-            p.windspeed = response['wind']['speed']
-        if response['wind'].get('deg'):
-            p.winddeg = response['wind']['deg']
-    if response.get('weather'):
-        if response['weather'][0]:
-            if response['weather'][0].get('main'):
-                p.weather = response['weather'][0]['main']
-
-    return p
+    @staticmethod
+    def add_units(data):
+        '''return temperature, humidity and windspeed with appropriate units'''
+        return str(data.temp_curr)+'C', str(data.humidity)+'%', str(data.windspeed)+'m/s'
 
 
 def get_headlines():
@@ -137,20 +150,15 @@ def main():
     device.orientation(270)
 
     try:
-        w = get_weather_data()
-        s = ''.join([str(w.time_of_entry[:5]),
-                         ' Outside:',
-                         ' %sC' % str(w.temp_curr),
-                         ' %s' % str(w.humidity), '%',
-                         ' %s' % str(w.weather),
-                         ' %sm/s ' % str(w.windspeed)])
+        ew = ExternalWeather()
+        we = ew.weather_data
+        t, h, w = ew.add_units(we)
+        s = ''.join([str(we.time_of_entry[:5]),' Outside:',' ',t,' ',h,' ',w,' ',we.weather])
         display_on_led_matrix(s)
 
-        w = get_internal_weather()
-        t, h = '%.1f' % w[3], '%.1f' % w[4]
-        s = ''.join([' Inside:',
-                     ' %sC' % str(t),
-                     ' %s' % str(h), '%'])
+        iw = InternalWeather()
+        t, h = iw.add_units(iw.weather_data)
+        s = ''.join([' Inside:',' ',t,' ',h])
         display_on_led_matrix(s)
         time.sleep(0.8)
 
