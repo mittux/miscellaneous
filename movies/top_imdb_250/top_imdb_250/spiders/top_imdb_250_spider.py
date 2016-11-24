@@ -1,5 +1,7 @@
 #
-# to run, from top-level dir: scrapy crawl top250 -o top250.json
+# to run:
+# scrapy runspider top_imdb_250_spider.py -o top250.json
+# alternatively from top-level dir: scrapy crawl top250 -o top250.json
 #
 
 import scrapy
