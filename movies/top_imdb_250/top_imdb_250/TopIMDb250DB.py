@@ -15,7 +15,7 @@ class TopIMDb250DataBase(object):
 
     def getOneTitle(self, **kwargs):
         """
-            To find a specific document use something like getOneTitle(**{"user" : "PhillyAdam"})
+            To find a specific document use getOneTitle(**{"user" : "PhillyAdam"}) or getOneTitle(user="PhillyAdam")
         """    
         result = self.collection.find_one(kwargs)
         return result
