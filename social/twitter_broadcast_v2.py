@@ -75,8 +75,11 @@ def broadcast(source, targets):
         result = []
         for t in targets:
             res = t.send(i)
-            if res:
+            if i == 'Done':
                 result.append(res)
+            else:
+                if res:
+                    result = [res]
         if result:
             yield result
 
