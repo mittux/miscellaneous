@@ -21,7 +21,7 @@ auth_details = OAuth(ACCESS_TOKEN, ACCESS_TOKEN_SECRET, CONSUMER_KEY, CONSUMER_S
 def coroutine(func):
     def start(*args,**kwargs):
         cr = func(*args,**kwargs)
-        cr.next()
+        next(cr)
         return cr
     return start
 
@@ -29,7 +29,7 @@ def coroutine(func):
 def printer():
     while True:
          count, tweet = (yield)
-         print '[%s] [%s] tweeted: %s' % (count, tweet['user']['screen_name'], tweet['text'])
+         print('[%s] [%s] tweeted: %s' % (count, tweet['user']['screen_name'], tweet['text']))
 
 def tweetor():
     global tweetCount
@@ -37,7 +37,8 @@ def tweetor():
 
     while tweetCount < TWEETCOUNT:
 
-        for tweet in tweet_generator:
+        #for tweet in tweet_generator:
+            tweet = next(tweet_generator)
             if tweet is None:
                     print("-- None --")
             elif tweet is Timeout:
@@ -51,20 +52,11 @@ def tweetor():
                     if tweetCount >= TWEETCOUNT:
                         break
                     tweetCount += 1
-                    return (tweetCount, tweet)
+                    yield (tweetCount, tweet)
             else:
                 pass
 
-    return 'Complete'
-
-
-def data_pipe(iterator, target):
-    while True:
-        twt = iterator()
-        if twt == 'Complete':
-            return
-        if twt:
-            target.send(twt)
+    raise StopIteration
 
 def main():
 
@@ -76,7 +68,10 @@ def main():
 
     startTime = dt.datetime.now()
 
-    data_pipe(tweetor, printer())
+    pr = printer()
+
+    for tweet in tweetor():
+        pr.send(tweet)
 
     stopTime = dt.datetime.now()
 

@@ -1,3 +1,4 @@
+#!/usr/bin/python2
 """
     This script captures English language tweets from Twitter's Public
     stream and then uses coroutines to broadcast it to different functions
@@ -48,28 +49,29 @@ def tweetor():
                 if tweetCount >= TWEETCOUNT:
                     break
                 tweetCount += 1
-                return tweet
+                yield tweet
         else:
             pass
 
-    return 'Done'
-
+    raise StopIteration
 
 def data_pipe(iterator, target):
+    it = iterator()
     while True:
-        twt = iterator()
-        if twt:
-            target.send(twt)
-        if twt == 'Done':
-            return
-
+        try:
+            twt = next(it)
+            if twt:
+                target.send(twt)
+        except StopIteration:
+            target.send("Done")
+            return        
 
 @coroutine
 def printer():
     global tweetCount
     while True:
         tweet = (yield)
-        print ('[%s] [%s] tweeted: %s' % (tweetCount, tweet['user']['screen_name'], tweet['text']))
+        print('[%s] [%s] tweeted: %s' % (tweetCount, tweet['user']['screen_name'], tweet['text']))
 
 
 @coroutine
@@ -102,8 +104,10 @@ def main():
 
     startTime = dt.datetime.now()
 
-    data_pipe(tweetor, broadcast([grep('trump',  printer()),
-                                  grep('brexit', printer())]))
+    pr = printer()
+    trump = grep('trump', pr)
+    brexit = grep('brexit', pr)
+    data_pipe(tweetor, broadcast([trump, brexit]))
 
     stopTime = dt.datetime.now()
 
