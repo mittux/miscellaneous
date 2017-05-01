@@ -24,7 +24,8 @@ auth_details = OAuth(ACCESS_TOKEN, ACCESS_TOKEN_SECRET, CONSUMER_KEY, CONSUMER_S
 
 def tweetor():
     global tweetCount
-    global tweet_generator
+    twitter_stream = TwitterStream(auth=auth_details)
+    tweet_generator = twitter_stream.statuses.sample()
 
     while tweetCount < TWEETCOUNT:
 
@@ -64,13 +65,6 @@ def grep(pattern):
             else:
                 result = None
 
-
-def data_pipe(target):
-    result = None
-    while True:
-        item = (yield result)
-        result = yield from target
-
 def done():
     yield 'Done'
 
@@ -80,22 +74,21 @@ def broadcast(source, targets):
     for i in itertools.chain(source(), done()):
         result = []
         for t in targets:
-            result.append(t.send(i))
-        yield result
+            res = t.send(i)
+            if res:
+                result.append(res)
+        if result:
+            yield result
 
 def main():
-    twitter_stream = TwitterStream(auth=auth_details)
 
     print("*** Sampling Twitter Public stream *** ")
-    global tweet_generator
-    tweet_generator = twitter_stream.statuses.sample()
 
     startTime = dt.datetime.now()
 
     for result in broadcast(tweetor, [grep('trump'), grep('brexit')]):
         for r in result:
-            if r:
-                print(r)
+            print(r)
 
     stopTime = dt.datetime.now()
 
